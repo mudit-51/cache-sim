@@ -2,6 +2,7 @@
 
 using namespace std;
 
+int MEM_SIZE = 4096;
 int ADDRESS_WIDTH;
 int CACHE_SIZE;
 int BLOCK_SIZE;
@@ -30,7 +31,7 @@ string int_to_hex(int x) {
 }
 
 void mem_init(map<string, vector<string>>& mem) {
-    for (int i = 0; i < 4096; i += 8) {
+    for (int i = 0; i < MEM_SIZE; i += 8) {
         vector<string> data;
         for (int j = 0; j < 8; j++) {
             data.push_back(int_to_hex(rand() % 255));
@@ -40,7 +41,7 @@ void mem_init(map<string, vector<string>>& mem) {
 }
 
 void print_mem(map<string, vector<string>>& mem) {
-    for (int i = 0; i < 4096; i += 8) {
+    for (int i = 0; i < MEM_SIZE; i += 8) {
         cout << "0x" << int_to_hex(i) << " ";
         for (int j = 0; j < 8; j++) {
             cout << mem[int_to_hex(i)][j] << " ";
