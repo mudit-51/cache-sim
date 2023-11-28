@@ -12,6 +12,8 @@ int INDEX_WIDTH;
 int TAG_WIDTH;
 int WRITE_HIT;
 int WRITE_MISS;
+int NUM_HITS;
+int NUM_MISS;
 
 int hex_to_int(string hex) {
     int x;
@@ -75,9 +77,6 @@ map<int, vector<tuple<int, int, vector<string>>>> cache_init() {
     INDEX_WIDTH = log2(NUM_SETS);
     TAG_WIDTH = ADDRESS_WIDTH - OFFSET_WIDTH - INDEX_WIDTH;
 
-    cout << "Offset width is " << OFFSET_WIDTH << "\nIndex width is "
-         << INDEX_WIDTH << "\nTag width is " << TAG_WIDTH << endl;
-
     map<int, vector<tuple<int, int, vector<string>>>> cache_mem;
     for (int i = 0; i < NUM_SETS; i++) {
         for (int j = 0; j < ASSOCIATIVITY; j++) {
@@ -89,6 +88,7 @@ map<int, vector<tuple<int, int, vector<string>>>> cache_init() {
 }
 
 void print_cache(map<int, vector<tuple<int, int, vector<string>>>>& cache) {
+    cout << endl;
     for (int i = 0; i < (int)pow(2, INDEX_WIDTH); i++) {
         cout << "Index " << i << endl;
         for (auto x : cache[i]) {
@@ -118,15 +118,12 @@ tuple<int, int, vector<string>>* read_from_cache(
     int i = 0;
     for (auto x : cache[index]) {
         if (get<0>(x) == -1) {
-            cout << "Cache miss. Retrieving and loading from main memory"
-                 << endl;
+            NUM_MISS++;
             cache[index][i] = make_tuple(
                 tag, 0, retrieve_from_mem(main_memory, target_address));
             return &cache[index][i];
         } else if (get<0>(x) == tag) {
-            cout << "Read hit" << endl;
-            cout << "Data at 0x" << target_address << " is "
-                 << get<2>(x)[offset] << endl;
+            NUM_HITS++;
             return &cache[index][i];
         }
         i++;
@@ -147,13 +144,10 @@ tuple<int, int, vector<string>>* read_and_evict_from_cache(
     auto* x = read_from_cache(cache, main_memory, target_address);
 
     if (x) {
+        NUM_HITS++;
         return x;
     }
-
-    cout << endl;
-    cout << "Cache full. Replacing random cache line and loading from main "
-            "memory"
-         << endl;
+    NUM_MISS++;
 
     int temp = rand() % ASSOCIATIVITY;
 
@@ -194,9 +188,6 @@ void write_through(map<int, vector<tuple<int, int, vector<string>>>>& cache,
         }
     }
     write_to_mem(main_memory, target_address, new_data);
-    cout << endl;
-    print_cache(cache);
-    cout << endl;
 }
 
 void write_back(map<int, vector<tuple<int, int, vector<string>>>>& cache,
@@ -223,9 +214,6 @@ void write_back(map<int, vector<tuple<int, int, vector<string>>>>& cache,
             write_to_mem(main_memory, target_address, new_data);
         }
     }
-    cout << endl;
-    print_cache(cache);
-    cout << endl;
 }
 
 int main() {
@@ -253,36 +241,40 @@ int main() {
     map<int, vector<tuple<int, int, vector<string>>>> cache_mem = cache_init();
 
     print_mem(main_memory);
-    while (true) {
-        string target_address;
-
-        cout << "Enter address to read ";
-        cin >> target_address;
-
-        if (target_address == "q") {
-            break;
-        }
-        read_and_evict_from_cache(cache_mem, main_memory, target_address);
-    }
     print_cache(cache_mem);
-    while (true) {
-        string target_address;
-        string input_byte;
 
-        cout << "Enter address to write ";
-        cin >> target_address;
+    cout << "Enter number of values to test: ";
+    int t;
+    cin >> t;
+    while (t--) {
+        cout << "Read(0) or Write(1)?: ";
+        int temp;
+        cin >> temp;
 
-        cout << "Enter byte value to write (in hex): ";
-        cin >> input_byte;
+        if (temp) {
+            string target_address;
+            string input_byte;
 
-        if (target_address == "q") {
-            break;
-        }
-        if (WRITE_HIT) {
-            write_through(cache_mem, main_memory, target_address, input_byte);
+            cout << "Enter address to write ";
+            cin >> target_address;
+            cout << "Enter byte value to write (in hex): ";
+            cin >> input_byte;
+
+            if (WRITE_HIT) {
+                write_through(cache_mem, main_memory, target_address,
+                              input_byte);
+            } else {
+                write_back(cache_mem, main_memory, target_address, input_byte);
+            }
         } else {
-            write_back(cache_mem, main_memory, target_address, input_byte);
+            string target_address;
+
+            cout << "Enter address to read: ";
+            cin >> target_address;
+
+            read_and_evict_from_cache(cache_mem, main_memory, target_address);
         }
     }
-    cout << "pass" << endl;
+    cout << " Number of hits = " << NUM_HITS << endl;
+    cout << " Number of misses = " << NUM_MISS << endl;
 }
